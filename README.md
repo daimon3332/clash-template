@@ -107,8 +107,22 @@ Pages 项目 -> Deployments -> Retry deployment
 
 ## 本地开发
 
+推荐一键启动（前端构建 + Pages Functions，含 `/api`）：
+
 ```bash
 npm install
+npm run dev:full
+```
+
+浏览器打开终端提示的本地地址（默认 `http://127.0.0.1:8788`）。本地未设置密码时，可用 `admin` 登录（管理员）。
+
+仅前端热更新（`vite`，端口通常 5173）时，需要**另开终端**先启动 API：
+
+```bash
+# 终端 1：API（8788）
+npm run dev:full
+
+# 终端 2：前端 HMR（会把 /api 代理到 8788）
 npm run dev
 ```
 
@@ -119,14 +133,7 @@ npm run typecheck
 npm run build
 ```
 
-本地预览 Pages Functions：
-
-```bash
-npm run build
-npm run pages:dev
-```
-
-没有绑定 KV 时，模板数据会使用内存存储；重启本地预览后会丢失。
+没有绑定 `TEMPLATE_KV` 时，模板数据使用内存存储；重启本地预览后会丢失。页面右上角会显示「内存存储」提示。
 
 ## 模板注入规则
 

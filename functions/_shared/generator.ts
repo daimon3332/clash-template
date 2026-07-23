@@ -121,8 +121,16 @@ function groupEnd(lines: string[], start: number) {
   return end;
 }
 
+function isProxyGroupsKey(line: string) {
+  return /^proxy-groups:\s*(?:\[\]|\{\})?\s*(?:#.*)?$/.test(line);
+}
+
+function findProxyGroupsStart(lines: string[]) {
+  return lines.findIndex(isProxyGroupsKey);
+}
+
 function findProxyGroup(lines: string[], matcher: (name: string) => boolean) {
-  const pg = lines.findIndex((line) => /^proxy-groups:\s*$/.test(line));
+  const pg = findProxyGroupsStart(lines);
   if (pg < 0) return -1;
   return lines.findIndex((line, index) => index > pg && groupStart(line) && matcher(groupName(line)));
 }
@@ -130,7 +138,7 @@ function findProxyGroup(lines: string[], matcher: (name: string) => boolean) {
 function findNodeSelectGroup(lines: string[]) {
   const byName = findProxyGroup(lines, (name) => name.includes("节点选择"));
   if (byName >= 0) return byName;
-  const pg = lines.findIndex((line) => /^proxy-groups:\s*$/.test(line));
+  const pg = findProxyGroupsStart(lines);
   if (pg < 0) return -1;
   for (let index = pg + 1; index < lines.length; index += 1) {
     if (!groupStart(lines[index])) continue;
@@ -188,7 +196,7 @@ function insertGroupBlock(lines: string[], index: number, block: string) {
 }
 
 function addProviderGroups(template: string, names: string[]) {
-  const lines = template.split("\n");
+  const lines = template.replace(/\r\n/g, "\n").split("\n");
   const existing = existingGroupNames(lines);
   const missing = names.filter((name) => !existing.has(name) && !existing.has(providerGroupTitle(name)));
   if (!missing.length) return template;
@@ -197,8 +205,16 @@ function addProviderGroups(template: string, names: string[]) {
   if (japan >= 0) return insertGroupBlock(lines, groupEnd(lines, japan), groups);
   const anchor = lines.findIndex((line) => line.includes("策略组"));
   if (anchor > 0) return insertGroupBlock(lines, anchor - 1, groups);
-  const pg = lines.findIndex((line) => /^proxy-groups:\s*$/.test(line));
-  if (pg >= 0) return insertGroupBlock(lines, lines.length, groups);
+  const pg = findProxyGroupsStart(lines);
+  if (pg >= 0) {
+    const head = lines[pg].trim().replace(/\s+#.*$/, "");
+    if (head === "proxy-groups: []" || head === "proxy-groups: {}") {
+      return [...lines.slice(0, pg), "proxy-groups:", ...groups.split("\n"), ...lines.slice(pg + 1)].join("\n");
+    }
+    const range = sectionRange(lines, "proxy-groups");
+    const insertAt = range ? range.end : lines.length;
+    return insertGroupBlock(lines, insertAt, groups);
+  }
   return `${template}\nproxy-groups:\n${groups}\n`;
 }
 

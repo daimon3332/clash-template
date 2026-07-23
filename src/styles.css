@@ -149,6 +149,60 @@ p { color: var(--muted); line-height: 1.55; }
   color: #0c666c;
   background: rgba(223, 248, 242, .9);
 }
+.toast-fixed {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 100;
+  width: min(560px, calc(100vw - 28px));
+  margin: 0;
+  transform: translateX(-50%);
+  box-shadow: 0 16px 40px rgba(15, 70, 82, .16);
+  pointer-events: none;
+}
+.toast-success {
+  color: #0a6a52;
+  border-color: #9fdcc8;
+  background: rgba(223, 248, 236, .96);
+}
+.toast-error {
+  color: #9b2434;
+  border-color: #f0b7be;
+  background: rgba(255, 239, 241, .96);
+}
+.toast-info {
+  color: #0c666c;
+  border-color: #bbe8df;
+  background: rgba(223, 248, 242, .96);
+}
+.topbar-meta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.role-pill, .warn-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.role-pill {
+  color: #2e747b;
+  background: #e9f7fa;
+}
+.warn-pill {
+  color: #9a5b00;
+  background: #fff4df;
+  border: 1px solid #f0d49a;
+}
+.logout-btn {
+  padding: 8px 12px;
+}
 
 .workspace {
   display: grid;
@@ -378,6 +432,7 @@ p { color: var(--muted); line-height: 1.55; }
 @media (max-width: 760px) {
   .app-shell { padding: 0 12px 14px; }
   .topbar { margin: 0 -12px 14px; padding: 10px 12px; flex-direction: column; align-items: stretch; gap: 10px; }
+  .topbar-meta { margin-left: 0; justify-content: flex-end; }
   .nav-tabs { padding-bottom: 2px; }
   .brand-tab { font-size: 20px; }
   .page-intro, .modal-head { flex-direction: column; align-items: stretch; }

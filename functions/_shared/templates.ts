@@ -44,6 +44,10 @@ async function saveCustomIds(env: Env, ids: string[]) {
   await kvPut(env, customIndexKey, JSON.stringify([...new Set(ids)]));
 }
 
+export function persistenceMode(env: Env): "kv" | "memory" {
+  return env.TEMPLATE_KV ? "kv" : "memory";
+}
+
 export async function listTemplates(env: Env) {
   const result: TemplateRecord[] = [];
   for (const item of defaultTemplates) {

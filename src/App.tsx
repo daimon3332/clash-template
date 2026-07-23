@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Role, SubscriptionInput, TemplateMeta, TemplateRecord } from "./lib/types";
 import { rewriteUriInput, uriInputToYaml, yamlInputToUri } from "./lib/nodeConverter";
 
@@ -7,6 +7,7 @@ const roleKey = "clash-template-role";
 
 type Page = "generate" | "templates" | "converter" | "rewriter";
 type TemplateMode = "saved" | "custom";
+type ToastKind = "info" | "success" | "error";
 
 class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -16,15 +17,38 @@ class ApiError extends Error {
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem(tokenKey);
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  const data = (await response.json().catch(() => ({}))) as { error?: string };
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw new ApiError("网络请求失败，请检查本地服务是否已启动", 0);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const raw = await response.text();
+  let data: { error?: string; warning?: string } = {};
+  if (raw) {
+    try {
+      data = JSON.parse(raw) as { error?: string; warning?: string };
+    } catch {
+      if (!response.ok) {
+        throw new ApiError(
+          contentType.includes("text/html")
+            ? "API 不可用。本地请先 npm run build 再 npm run pages:dev，或同时启动 API 代理目标"
+            : "服务器返回了非 JSON 响应",
+          response.status,
+        );
+      }
+      throw new ApiError("服务器返回了非 JSON 响应", response.status);
+    }
+  }
   if (!response.ok) throw new ApiError(data.error || "请求失败", response.status);
   return data as T;
 }
@@ -69,18 +93,41 @@ export default function App() {
   const [rewriteRemark, setRewriteRemark] = useState("");
   const [rewriteOutput, setRewriteOutput] = useState("");
   const [message, setMessage] = useState("");
+  const [toastKind, setToastKind] = useState<ToastKind>("info");
   const [editing, setEditing] = useState<TemplateRecord | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [persistence, setPersistence] = useState<"kv" | "memory" | "">("");
+  const toastTimer = useRef<number | null>(null);
 
   const currentTemplate = useMemo(() => templates.find((item) => item.id === templateId), [templateId, templates]);
 
-  function clearAuth(message = "登录已过期，请重新登录") {
+  function showToast(text: string, kind: ToastKind = "info") {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    setToastKind(kind);
+    setMessage(text);
+    toastTimer.current = window.setTimeout(() => {
+      setMessage("");
+      toastTimer.current = null;
+    }, kind === "error" ? 6000 : 3200);
+  }
+
+  function clearAuth(text = "登录已过期，请重新登录") {
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(roleKey);
     setToken("");
     setRole("user");
     setTemplates([]);
-    setMessage(message);
+    setEditing(null);
+    setPage("generate");
+    setPersistence("");
+    showToast(text, "error");
+  }
+
+  function logout() {
+    clearAuth("已退出登录");
   }
 
   function handleError(error: unknown, fallback: string) {
@@ -88,21 +135,34 @@ export default function App() {
       clearAuth();
       return;
     }
-    setMessage(error instanceof Error ? error.message : fallback);
+    if (error instanceof ApiError && error.status === 403) {
+      showToast(error.message || "需要管理员权限", "error");
+      return;
+    }
+    showToast(error instanceof Error ? error.message : fallback, "error");
   }
 
   async function loadTemplates() {
-    const data = await api<{ templates: TemplateMeta[] }>("/api/templates");
+    const data = await api<{ templates: TemplateMeta[]; persistence?: "kv" | "memory" }>("/api/templates");
     setTemplates(data.templates);
+    if (data.persistence) setPersistence(data.persistence);
     if (!data.templates.some((item) => item.id === templateId) && data.templates[0]) setTemplateId(data.templates[0].id);
+    return data;
   }
 
   useEffect(() => {
-    if (token) loadTemplates().catch((error) => handleError(error, "读取模板失败"));
+    if (!token) return;
+    loadTemplates().catch((error) => handleError(error, "读取模板失败"));
   }, [token]);
+
+  useEffect(() => () => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+  }, []);
 
   async function login(event: React.FormEvent) {
     event.preventDefault();
+    if (loggingIn) return;
+    setLoggingIn(true);
     try {
       const data = await api<{ token: string; role: Role }>("/api/login", {
         method: "POST",
@@ -112,13 +172,22 @@ export default function App() {
       localStorage.setItem(roleKey, data.role);
       setToken(data.token);
       setRole(data.role);
-      setMessage("登录成功");
+      setPassword("");
+      showToast(data.role === "admin" ? "登录成功（管理员）" : "登录成功", "success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "登录失败");
+      handleError(error, "登录失败");
+    } finally {
+      setLoggingIn(false);
     }
   }
 
   async function generate() {
+    if (generating) return;
+    if (templateMode === "custom" && !customTemplate.trim()) {
+      showToast("请先输入完整 YAML 模板", "error");
+      return;
+    }
+    setGenerating(true);
     try {
       const cleanSubs = subscriptions.filter((item) => item.prefix.trim() && item.url.trim());
       const data = await api<{ content: string }>("/api/generate", {
@@ -131,9 +200,11 @@ export default function App() {
         }),
       });
       setOutput(data.content);
-      setMessage("配置已生成");
+      showToast("配置已生成", "success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "生成失败");
+      handleError(error, "生成失败");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -143,7 +214,7 @@ export default function App() {
       setEditing(data);
       setEditingName(data.name);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "读取模板失败");
+      handleError(error, "读取模板失败");
     }
   }
 
@@ -153,19 +224,33 @@ export default function App() {
   }
 
   async function saveEditing() {
-    if (!editing) return;
+    if (!editing || saving) return;
+    if (!editingName.trim() || !editing.content.trim()) {
+      showToast("模板名称和内容不能为空", "error");
+      return;
+    }
+    setSaving(true);
     try {
-      const data = await api<{ template: TemplateRecord }>("/api/templates", {
+      const data = await api<{ template: TemplateRecord; persistence?: "kv" | "memory"; warning?: string }>("/api/templates", {
         method: "POST",
-        body: JSON.stringify({ id: editing.id || undefined, name: editingName, content: editing.content, builtin: editing.builtin }),
+        body: JSON.stringify({
+          id: editing.id || undefined,
+          name: editingName,
+          content: editing.content,
+          builtin: editing.builtin,
+        }),
       });
       setEditing(data.template);
       setEditingName(data.template.name);
       setTemplateId(data.template.id);
-      setMessage("模板已保存");
+      if (data.persistence) setPersistence(data.persistence);
       await loadTemplates();
+      const warning = data.warning || (data.persistence === "memory" ? "当前未绑定 TEMPLATE_KV，保存仅在本进程内存中，重启后会丢失" : "");
+      showToast(warning ? `模板已保存（${warning}）` : "模板已保存", warning ? "info" : "success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "保存失败");
+      handleError(error, "保存失败");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -174,70 +259,68 @@ export default function App() {
     try {
       await api(`/api/templates?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       setEditing(null);
-      setMessage("模板已删除");
+      showToast("模板已删除", "success");
       await loadTemplates();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "删除失败");
+      handleError(error, "删除失败");
     }
   }
 
   function updateSub(index: number, value: Partial<SubscriptionInput>) {
-    setSubscriptions((items) => items.map((item, i) => i === index ? { ...item, ...value } : item));
+    setSubscriptions((items) => items.map((item, i) => (i === index ? { ...item, ...value } : item)));
   }
 
   function removeSub(index: number) {
-    setSubscriptions((items) => items.length === 1 ? [emptySub()] : items.filter((_, i) => i !== index));
+    setSubscriptions((items) => (items.length === 1 ? [emptySub()] : items.filter((_, i) => i !== index)));
   }
 
   function convertUriToYaml() {
     try {
       setConverterOutput(uriInputToYaml(converterInput, converterWrap));
-      setMessage("URI 已转换为 YAML");
+      showToast("URI 已转换为 YAML", "success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "转换失败");
+      handleError(error, "转换失败");
     }
   }
 
   function convertYamlToUri() {
     try {
       setConverterOutput(yamlInputToUri(converterInput));
-      setMessage("YAML 已转换为 URI");
+      showToast("YAML 已转换为 URI", "success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "转换失败");
+      handleError(error, "转换失败");
     }
   }
 
-  async function copyConverterOutput() {
-    if (!converterOutput) return;
-    await navigator.clipboard.writeText(converterOutput);
-    setMessage("已复制转换结果");
+  async function copyText(text: string, okMessage: string) {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(okMessage, "success");
+    } catch {
+      showToast("复制失败，请手动选择文本复制", "error");
+    }
   }
 
   function rewriteNodes() {
     try {
       setRewriteOutput(rewriteUriInput(rewriteInput, rewriteAddress, rewriteRemark));
-      setMessage("节点已改写");
+      showToast("节点已改写", "success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "改写失败");
+      handleError(error, "改写失败");
     }
-  }
-
-  async function copyRewriteOutput() {
-    if (!rewriteOutput) return;
-    await navigator.clipboard.writeText(rewriteOutput);
-    setMessage("已复制改写结果");
   }
 
   if (!token) {
     return (
       <main className="login-shell">
+        {message && <div className={`toast toast-fixed toast-${toastKind}`} role="status">{message}</div>}
         <form className="login-card" onSubmit={login}>
           <div className="brand-mark">Clash Template</div>
           <h1>模板配置生成</h1>
           <p>输入访问密码进入。管理员密码可管理模板。</p>
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="访问密码" autoFocus />
-          <button>登录</button>
-          {message && <div className="toast">{message}</div>}
+          <button disabled={loggingIn}>{loggingIn ? "登录中..." : "登录"}</button>
         </form>
       </main>
     );
@@ -245,6 +328,8 @@ export default function App() {
 
   return (
     <main className="app-shell">
+      {message && <div className={`toast toast-fixed toast-${toastKind}`} role="status">{message}</div>}
+
       <header className="topbar">
         <button className="brand-tab" onClick={() => setPage("generate")}>Clash Template</button>
         <nav className="nav-tabs">
@@ -253,9 +338,12 @@ export default function App() {
           <button className={page === "rewriter" ? "active" : ""} onClick={() => setPage("rewriter")}>节点改写</button>
           {role === "admin" && <button className={page === "templates" ? "active" : ""} onClick={() => setPage("templates")}>模板管理</button>}
         </nav>
+        <div className="topbar-meta">
+          <span className="role-pill">{role === "admin" ? "管理员" : "用户"}</span>
+          {persistence === "memory" && <span className="warn-pill" title="未绑定 TEMPLATE_KV">内存存储</span>}
+          <button className="soft logout-btn" onClick={logout}>退出</button>
+        </div>
       </header>
-
-      {message && <div className="toast">{message}</div>}
 
       {page === "generate" ? (
         <section className="workspace">
@@ -319,7 +407,7 @@ export default function App() {
             </section>
 
             <section className="action-card">
-              <button className="primary" onClick={generate}>生成配置</button>
+              <button className="primary" disabled={generating} onClick={generate}>{generating ? "生成中..." : "生成配置"}</button>
               <button className="secondary" disabled={!output} onClick={() => download(templateMode === "saved" ? currentTemplate?.name || "clash" : "custom-clash", output)}>下载 YAML</button>
             </section>
           </section>
@@ -346,7 +434,7 @@ export default function App() {
               <button onClick={convertUriToYaml}>URI → YAML</button>
               <button className="secondary" onClick={convertYamlToUri}>YAML → URI</button>
               <label className="check-pill"><input type="checkbox" checked={converterWrap} onChange={(event) => setConverterWrap(event.target.checked)} />带 proxies</label>
-              <button className="soft" onClick={copyConverterOutput} disabled={!converterOutput}>复制结果</button>
+              <button className="soft" onClick={() => copyText(converterOutput, "已复制转换结果")} disabled={!converterOutput}>复制结果</button>
               <button className="soft" onClick={() => { setConverterInput(""); setConverterOutput(""); }}>清空</button>
             </div>
           </div>
@@ -382,7 +470,7 @@ export default function App() {
             </div>
             <div className="mini-actions">
               <button onClick={rewriteNodes}>生成改写节点</button>
-              <button className="soft" onClick={copyRewriteOutput} disabled={!rewriteOutput}>复制结果</button>
+              <button className="soft" onClick={() => copyText(rewriteOutput, "已复制改写结果")} disabled={!rewriteOutput}>复制结果</button>
               <button className="soft" onClick={() => { setRewriteInput(""); setRewriteAddress(""); setRewriteRemark(""); setRewriteOutput(""); }}>清空</button>
             </div>
           </div>
@@ -423,7 +511,7 @@ export default function App() {
           <div className="page-intro">
             <div>
               <h2>模板库</h2>
-              <p>默认模板可以修改但不能删除；自定义模板可以修改和删除。</p>
+              <p>默认模板可以修改但不能删除；自定义模板可以修改和删除。{persistence === "memory" ? " 当前为内存存储，重启后自定义/修改会丢失。" : ""}</p>
             </div>
             <div className="mini-actions">
               <button onClick={() => openNewTemplate()}>新建模板</button>
@@ -442,20 +530,20 @@ export default function App() {
       )}
 
       {editing && (
-        <div className="modal-backdrop" onClick={() => setEditing(null)}>
+        <div className="modal-backdrop" onClick={() => !saving && setEditing(null)}>
           <section className="template-modal" onClick={(event) => event.stopPropagation()}>
             <header className="modal-head">
               <div>
                 <h2>{editing.id ? "编辑模板" : "新建模板"}</h2>
                 <p>{editing.builtin ? "默认模板可修改，不可删除。" : "自定义模板可修改和删除。"}</p>
               </div>
-              <button className="soft" onClick={() => setEditing(null)}>关闭</button>
+              <button className="soft" disabled={saving} onClick={() => setEditing(null)}>关闭</button>
             </header>
-            <input className="modal-name" value={editingName} onChange={(event) => setEditingName(event.target.value)} placeholder="模板名称" />
-            <textarea className="modal-editor" value={editing.content} onChange={(event) => setEditing({ ...editing, content: event.target.value })} />
+            <input className="modal-name" value={editingName} onChange={(event) => setEditingName(event.target.value)} placeholder="模板名称" disabled={saving} />
+            <textarea className="modal-editor" value={editing.content} onChange={(event) => setEditing({ ...editing, content: event.target.value })} disabled={saving} />
             <footer className="modal-actions">
-              <button className="primary" onClick={saveEditing}>保存模板</button>
-              {!editing.builtin && editing.id && <button className="danger" onClick={() => removeTemplate(editing.id)}>删除模板</button>}
+              <button className="primary" disabled={saving} onClick={saveEditing}>{saving ? "保存中..." : "保存模板"}</button>
+              {!editing.builtin && editing.id && <button className="danger" disabled={saving} onClick={() => removeTemplate(editing.id)}>删除模板</button>}
             </footer>
           </section>
         </div>

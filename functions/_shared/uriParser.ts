@@ -7,5 +7,13 @@ export function proxyToYaml(node: ProxyNode, indent = 2) {
 }
 
 export function parseUriLines(input: string) {
-  return input.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map(uriToNode);
+  const lines = input.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return lines.map((line, index) => {
+    try {
+      return uriToNode(line);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "解析失败";
+      throw new Error(`第 ${index + 1} 行: ${reason}`);
+    }
+  });
 }

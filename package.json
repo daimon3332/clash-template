@@ -4,7 +4,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-09",
+    "pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-09 --ip 127.0.0.1 --port 8788",
+    "dev:full": "npm run build && npm run pages:dev",
     "deploy": "wrangler pages deploy dist --project-name clash-template"
   },
   "dependencies": {
