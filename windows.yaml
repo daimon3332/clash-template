@@ -1,0 +1,483 @@
+# =========================
+# 基础配置
+# =========================
+port: 7890
+socks-port: 7891
+redir-port: 7892
+mixed-port: 7893
+
+tun:
+  enable: false
+  stack: mixed
+  device: Mihomo
+  auto-route: true
+  auto-detect-interface: true
+  strict-route: true
+  # 开启了DNS劫持
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+
+# 允许其他设备（同一局域网/docker/外部IP）连接 Clash
+allow-lan: true
+bind-address: "*"
+ipv6: false
+unified-delay: true
+tcp-concurrent: true
+log-level: info
+find-process-mode: strict
+keep-alive-idle: 600
+keep-alive-interval: 15
+
+external-controller: 127.0.0.1:9090
+secret: "123456"
+external-ui: "./ui"
+external-ui-url: "https://gh-proxy.com/https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip"
+
+# =========================
+# Geo 数据获取
+# =========================
+geodata-mode: true
+geo-auto-update: true
+geodata-loader: standard
+geo-update-interval: 24
+geox-url:
+  geoip: https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat
+  geosite: https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat
+  mmdb: https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb
+  asn: https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb
+
+# =========================
+# 配置文件管理
+# =========================
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+# =========================
+# 端口监听
+# =========================
+listeners:
+  - name: port-hk
+    type: mixed
+    port: 42000
+    udp: true
+  - name: port-sg
+    type: mixed
+    port: 42001
+    udp: true
+  - name: port-jp
+    type: mixed
+    port: 42002
+    udp: true
+  - name: port-us
+    type: mixed
+    port: 42003
+    udp: true
+  - name: port-uk
+    type: mixed
+    port: 42004
+    udp: true
+  - name: port-节点选择
+    type: mixed
+    port: 42005
+    udp: true
+  - name: china
+    type: mixed
+    port: 42006
+    udp: true
+
+# =========================
+# 静态节点 (Local)
+# =========================
+# =========================
+# 机场订阅
+# =========================
+# =========================
+# 嗅探配置
+# =========================
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: true 
+  sniff:
+    TLS:
+      ports: [443, 8443]
+    HTTP:
+      ports: [80, 8080-8880]
+    QUIC:
+      ports: [443, 8443]
+
+
+# =========================
+# DNS 配置
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  prefer-h3: false
+  respect-rules: true
+  cache-algorithm: arc
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '+.lan'
+    - '+.local'
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+    - 'localhost.ptlogin2.qq.com'
+    - 'localhost.sec.qq.com'
+    - 'localhost.work.weixin.qq.com'
+    - "+.ntp.org"
+    - "+.pool.ntp.org"
+    - "+.time.windows.com"
+    - "+.time.apple.com"
+    - "time.*.com"
+    - "ntp.*.com"
+    - "+.stun.*.*"
+    - "+.stun.*.*.*"
+    - "+.stun.*.*.*.*"
+    - "stun.*.*"
+    - "stun.*.*.*"
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+    - 223.6.6.6
+  nameserver:
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.google/dns-query
+  proxy-server-nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  direct-nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  direct-nameserver-follow-policy: true
+  nameserver-policy:
+    'geosite:cn':
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
+
+
+
+proxy-groups:
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+      - DIRECT
+      - 🇺🇸 美国手动
+      - 🇭🇰 香港手动
+      - 🇸🇬 新加坡手动
+      - 🇯🇵 日本手动
+      - 🇬🇧 英国手动
+      - 亚洲智能筛选
+      - 🇭🇰 香港智能筛选
+
+  # 2. 🇺🇸 美国手动
+  - name: 🇺🇸 美国手动
+    type: select
+    include-all: true
+    filter: "(?=.*(美|US|🇺🇸|(?i)States|America))^((?!(港|台|日|韩|新|英)).)*$"
+
+  - name: 🔎 Google服务
+    type: select
+    proxies: [ 亚洲智能筛选, 🇯🇵 日本手动, 🇸🇬 新加坡手动, 🇺🇸 美国手动, 🚀 节点选择]
+
+  - name: 💬 AI 服务
+    type: select
+    proxies: [🇺🇸 美国手动, 🚀 节点选择]
+
+  - name: 🇭🇰 香港手动
+    type: select
+    include-all: true
+    filter: "(?=.*(港|HK|(?i)Hong))^((?!(台|日|韩|新|深|美|英)).)*$"
+
+  - name: 🇸🇬 新加坡手动
+    type: select
+    include-all: true
+    filter: "(?=.*(新加坡|坡|狮城|SG|Singapore))^((?!(港|台|韩|日|美|英)).)*$"
+
+  - name: 🇯🇵 日本手动
+    type: select
+    include-all: true
+    filter: "(?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美|英)).)*$"
+    
+  - name: Microsoft
+    type: select
+    proxies: [🇭🇰 香港智能筛选, 亚洲智能筛选, DIRECT, 🚀 节点选择, 🇭🇰 香港手动, 🇺🇸 美国手动]
+    
+  - name: 🐱 Github
+    type: select
+    proxies: [🇭🇰 香港智能筛选, 🚀 节点选择]
+
+  - name: 📹 油管视频
+    type: select
+    proxies: [🇭🇰 香港智能筛选, 亚洲智能筛选, 🚀 节点选择]
+    
+  - name: 📲 电报消息
+    type: select
+    proxies: [🇺🇸 美国手动, 🇭🇰 香港智能筛选, 亚洲智能筛选, 🚀 节点选择]
+
+  - name: Apple
+    type: select
+    proxies: [🚀 节点选择, DIRECT, 🇭🇰 香港手动, 🇯🇵 日本手动, 🇺🇸 美国手动]
+    
+  - name: Bilibili
+    type: select
+    proxies: [DIRECT, 🚀 节点选择, 🇭🇰 香港手动]
+
+  - name: Games
+    type: select
+    proxies: [DIRECT, 🚀 节点选择, 🇭🇰 香港手动, 🇯🇵 日本手动, 🇺🇸 美国手动]
+    
+  - name: Netflix
+    type: select
+    proxies: [亚洲智能筛选, 🚀 节点选择, 🇯🇵 日本手动, 🇸🇬 新加坡手动, 🇺🇸 美国手动]  
+
+  - name: 🇬🇧 英国手动
+    type: select
+    include-all: true
+    filter: "(?=.*(英|UK|United Kingdom|Britain))^((?!(美|港|台|日|韩|新)).)*$"
+    
+  - name: 🛑 广告拦截
+    type: select
+    proxies: [REJECT, DIRECT]
+
+  - name: 🏠 私有网络
+    type: select
+    proxies: [DIRECT, 🚀 节点选择, REJECT]    
+
+  # 8. 智能筛选组
+  - name: 🇭🇰 香港智能筛选
+    type: smart
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all: true
+    filter: "(?=.*(港|HK|(?i)Hong))^((?!(台|日|韩|新|深|美|英)).)*$"
+
+  - name: 亚洲智能筛选
+    type: smart
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all: true
+    filter: "(?=.*(新加坡|坡|狮城|SG|Singapore|日|JP|(?i)Japan))^((?!(港|台|韩|美|英)).)*$"
+
+
+# =========================
+# 策略组
+# =========================
+rule-anchor:
+  domain: &domain {type: http, behavior: domain, format: mrs, interval: 86400}
+  ip: &ip {type: http, behavior: ipcidr, format: mrs, interval: 86400}
+
+rule-providers:
+  category-ads-all:
+    <<: *domain
+    path: ./ruleset/category-ads-all.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.mrs
+
+  private:
+    <<: *domain
+    path: ./ruleset/private.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs
+
+  private-ip:
+    <<: *ip
+    path: ./ruleset/private-ip.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs
+
+  category-ai-chat-!cn:
+    <<: *domain
+    path: ./ruleset/category-ai-chat-!cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs
+
+  youtube:
+    <<: *domain
+    path: ./ruleset/youtube.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs
+
+  telegram:
+    <<: *domain
+    path: ./ruleset/telegram.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs
+
+  telegram-ip:
+    <<: *ip
+    path: ./ruleset/telegram-ip.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs
+
+  github:
+    <<: *domain
+    path: ./ruleset/github.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs
+
+  gitlab:
+    <<: *domain
+    path: ./ruleset/gitlab.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gitlab.mrs
+
+  google:
+    <<: *domain
+    path: ./ruleset/google.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs
+
+  google-cn:
+    <<: *domain
+    path: ./ruleset/google-cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-cn.mrs
+
+  apple:
+    <<: *domain
+    path: ./ruleset/apple.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs
+
+  apple-cn:
+    <<: *domain
+    path: ./ruleset/apple-cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-cn.mrs
+
+  microsoft:
+    <<: *domain
+    path: ./ruleset/microsoft.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs
+
+  microsoft-cn:
+    <<: *domain
+    path: ./ruleset/microsoft-cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft@cn.mrs
+
+  onedrive:
+    <<: *domain
+    path: ./ruleset/onedrive.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs
+
+  steam:
+    <<: *domain
+    path: ./ruleset/steam.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs
+
+  steam-cn:
+    <<: *domain
+    path: ./ruleset/steam-cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam@cn.mrs
+
+  category-games-cn:
+    <<: *domain
+    path: ./ruleset/category-games-cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-games@cn.mrs
+
+  bilibili:
+    <<: *domain
+    path: ./ruleset/bilibili.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs
+
+  biliintl:
+    <<: *domain
+    path: ./ruleset/biliintl.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/biliintl.mrs
+
+  netflix:
+    <<: *domain
+    path: ./ruleset/netflix.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs
+
+  netflix-ip:
+    <<: *ip
+    path: ./ruleset/netflix-ip.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs
+
+  geolocation-cn:
+    <<: *domain
+    path: ./ruleset/geolocation-cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-cn.mrs
+
+  cn:
+    <<: *domain
+    path: ./ruleset/cn.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs
+
+  cn-ip:
+    <<: *ip
+    path: ./ruleset/cn-ip.mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs
+
+# =========================
+# 分流规则
+# =========================
+rules:
+  - "IN-PORT,42000,🇭🇰 香港手动"
+  - "IN-PORT,42001,🇸🇬 新加坡手动"
+  - "IN-PORT,42002,🇯🇵 日本手动"
+  - "IN-PORT,42003,🇺🇸 美国手动"
+  - "IN-PORT,42004,🇬🇧 英国手动"
+  - "IN-PORT,42005,🚀 节点选择"
+  - "IN-PORT,42006,DIRECT"
+
+  
+  #- "DOMAIN-SUFFIX,chatgpt.com,🚀 节点选择"
+  - "DOMAIN-SUFFIX,browserleaks.com,🚀 节点选择"
+  - "DOMAIN-SUFFIX,meta.com,🇺🇸 美国手动"
+  - "DOMAIN-SUFFIX,reddit.com,🇺🇸 美国手动"
+  - "DOMAIN-SUFFIX,instagram.com,🇺🇸 美国手动"
+  
+  - "DOMAIN-SUFFIX,linux.do,🇭🇰 香港手动"
+  - "DOMAIN-SUFFIX,nodeseek.com,🇭🇰 香港手动"
+  
+  - "DOMAIN-SUFFIX,zeyuyun.com,DIRECT"
+  - "DOMAIN-SUFFIX,hybgzs.com,DIRECT"
+  - "DOMAIN-SUFFIX,javacn.site,DIRECT"
+  - "DOMAIN-SUFFIX,programmercarl.com,DIRECT"
+  - "DOMAIN-SUFFIX,xionguamagui.com,DIRECT"
+  - "DOMAIN-SUFFIX,javaguide.cn,DIRECT"
+  - "DOMAIN-SUFFIX,paicoding.com,DIRECT"
+
+  - "RULE-SET,category-ads-all,🛑 广告拦截"
+  
+  # AI
+  - "RULE-SET,category-ai-chat-!cn,💬 AI 服务"
+
+  # 私有网络
+  - "RULE-SET,private,🏠 私有网络"
+  - "RULE-SET,private-ip,🏠 私有网络,no-resolve"
+
+  # Bilibili、Youtube、奈飞
+  - "RULE-SET,biliintl,Bilibili"
+  - "RULE-SET,bilibili,Bilibili"
+  - "RULE-SET,youtube,📹 油管视频"
+  - "RULE-SET,netflix,Netflix"
+  - "RULE-SET,netflix-ip,Netflix,no-resolve"
+  
+  # 谷歌服务
+  - "RULE-SET,google,🔎 Google服务"
+
+  # 电报
+  - "RULE-SET,telegram,📲 电报消息"
+  - "RULE-SET,telegram-ip,📲 电报消息,no-resolve"
+
+  # github、gitlab
+  - "RULE-SET,github,🐱 Github"
+  - "RULE-SET,gitlab,🐱 Github"
+
+  # Apple
+  - "RULE-SET,apple-cn,DIRECT"
+  - "RULE-SET,apple,Apple"
+  
+  # 微软服务
+  - "RULE-SET,microsoft-cn,DIRECT"
+  - "RULE-SET,onedrive,Microsoft"
+  - "RULE-SET,microsoft,Microsoft"
+  
+  # Steam、游戏
+  - "RULE-SET,steam-cn,DIRECT"
+  - "RULE-SET,steam,Games"
+  - "RULE-SET,category-games-cn,DIRECT"
+  
+  # 中国直连
+  - "RULE-SET,geolocation-cn,DIRECT"
+  - "RULE-SET,cn,DIRECT"
+  - "RULE-SET,cn-ip,DIRECT,no-resolve"
+
+  - "MATCH, 🚀 节点选择"

@@ -1,0 +1,23 @@
+# deps & build
+node_modules/
+dist/
+
+# cloudflare / local secrets
+.wrangler/
+.dev.vars
+.env
+.env.*
+*.pem
+*.key
+wrangler-test*.log
+wrangler-test-result.txt
+
+# work notes / local data (not app defaults)
+plan.md
+sample-output.yaml
+*.local.yaml
+*.local.yml
+
+# local scratch
+src/data/*
+!src/data/.gitkeep

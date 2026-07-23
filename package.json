@@ -1,0 +1,24 @@
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "pages:dev": "wrangler pages dev dist --compatibility-date=2026-06-09",
+    "deploy": "wrangler pages deploy dist --project-name clash-template"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "wrangler": "latest"
+  }
+}
