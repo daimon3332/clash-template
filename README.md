@@ -1,21 +1,23 @@
 # Clash Template
 
-一个用于生成 Clash/Mihomo 配置的 Web 工具，支持模板管理、机场订阅注入、静态节点导入，以及常见节点 URI 与 YAML 节点互转。项目面向 Cloudflare Pages 部署，模板数据使用 Cloudflare KV 持久化。
+A web tool for generating Clash/Mihomo configurations. It supports template management, proxy provider subscription injection, static node imports, and conversion between common node URIs and YAML nodes. The project is designed for deployment on Cloudflare Pages, with template data persisted in Cloudflare KV.
 
-## 功能
+[**English**](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
-- 内置 3 个不可删除模板：Windows、Linux 国内、Linux 国外
-- 默认模板可在线编辑，自定义模板可新增、上传、编辑、删除
-- 支持直接输入完整 Clash/Mihomo YAML 作为模板
-- 支持多条机场订阅，自动写入 `proxy-providers`、`节点选择`、机场策略组
-- 支持静态节点输入：多行 URI、带 `proxies:` 的 YAML、裸 YAML 节点列表
-- 提供 URI ↔ YAML 节点转换页面
-- 支持访问密码与管理员密码
-- 支持 Cloudflare Pages Functions + KV
+## Features
 
-## 支持协议
+- Three built-in templates that cannot be deleted: Windows, Linux China, and Linux Global
+- Online editing for default templates, plus creation, upload, editing, and deletion of custom templates
+- Direct input of complete Clash/Mihomo YAML configurations as templates
+- Multiple proxy provider subscriptions, automatically added to `proxy-providers`, `节点选择`, and provider policy groups
+- Static node input as multiline URIs, YAML containing `proxies:`, or bare YAML node lists
+- URI ↔ YAML node conversion
+- Access and administrator passwords
+- Cloudflare Pages Functions + KV
 
-URI/YAML 转换支持常见协议：
+## Supported Protocols
+
+URI/YAML conversion supports common protocols:
 
 - `ss`
 - `ssr`
@@ -33,123 +35,128 @@ URI/YAML 转换支持常见协议：
 - `wireguard` / `wg`
 - `mieru`
 
+## Deploying to Cloudflare Pages
 
+Cloudflare Dashboard Git integration is recommended. It requires neither the command line nor a `wrangler.toml` file. This repository does not include `wrangler.toml`; KV bindings are managed in the Cloudflare Dashboard.
 
-## Cloudflare Pages 部署
-
-推荐使用 Cloudflare Dashboard 的 Git 集成部署，不需要命令行，也不需要 `wrangler.toml`。本仓库已移除 `wrangler.toml`，KV 绑定由 Cloudflare 网页后台管理。
-
-1. 打开 Cloudflare Dashboard，进入 **Workers & Pages**。
-2. 点击 **Create application**。
-3. 选择 **Pages**。
-4. 选择 **Connect to Git**，连接本仓库。
-5. 构建设置：
+1. Open Cloudflare Dashboard and go to **Workers & Pages**.
+2. Click **Create application**.
+3. Select **Pages**.
+4. Select **Connect to Git** and connect this repository.
+5. Use the following build settings:
 
 ```text
-Framework preset: Vite 或 None
+Framework preset: Vite or None
 Build command: npm run build
 Build output directory: dist
-Root directory: 留空
+Root directory: leave blank
 Production branch: master
 ```
 
-6. 点击 **Save and Deploy**。
+6. Click **Save and Deploy**.
 
-## 环境变量
+## Environment Variables
 
-进入 Pages 项目：
+Open the Pages project:
 
 ```text
 Settings -> Variables and Secrets
 ```
 
-添加以下变量，建议都选择加密保存：
+Add the following variables and store them as encrypted values:
 
-| 变量 | 说明 |
+| Variable | Description |
 | --- | --- |
-| `ACCESS_PASSWORD` | 普通访问密码 |
-| `ADMIN_PASSWORD` | 管理员密码，可进入模板管理 |
-| `TOKEN_SECRET` | Token 签名密钥，建议设置随机长字符串 |
+| `ACCESS_PASSWORD` | Standard access password |
+| `ADMIN_PASSWORD` | Administrator password for template management |
+| `TOKEN_SECRET` | Token signing secret; use a long random string |
 
-如果没有设置 `ACCESS_PASSWORD` 和 `ADMIN_PASSWORD`，本地开发默认可用 `admin` 作为管理员密码。生产环境建议务必设置上述变量。
+If neither `ACCESS_PASSWORD` nor `ADMIN_PASSWORD` is set, local development uses `admin` as the default administrator password. Set these variables in production.
 
-## Cloudflare KV 绑定
+## Cloudflare KV Binding
 
-先在 Cloudflare Dashboard 创建 KV：
+Create a KV namespace in Cloudflare Dashboard:
 
 ```text
 Storage & Databases / Workers KV -> Create namespace
 ```
 
-然后进入 Pages 项目添加绑定：
+Then add the binding to the Pages project:
 
 ```text
 Settings -> Bindings -> Add -> KV namespace
 Variable name: TEMPLATE_KV
-KV namespace: 你创建的 KV namespace
+KV namespace: your KV namespace
 ```
 
-注意：绑定名必须是 `TEMPLATE_KV`，否则模板保存不会持久化。
+The binding name must be `TEMPLATE_KV`; otherwise, saved template changes will not persist.
 
-添加或修改环境变量、KV 绑定后，需要重新部署一次：
+After adding or changing environment variables or the KV binding, redeploy:
 
 ```text
-Pages 项目 -> Deployments -> Retry deployment
+Pages project -> Deployments -> Retry deployment
 ```
 
-## 部署后验证
+## Post-deployment Verification
 
-1. 用 `ADMIN_PASSWORD` 登录。
-2. 进入右上角 **模板管理**。
-3. 修改任意模板并保存。
-4. 刷新页面后再次进入模板管理。
-5. 如果修改仍然存在，说明 KV 绑定成功。
+1. Sign in with `ADMIN_PASSWORD`.
+2. Open **Template Management** in the upper-right corner.
+3. Edit and save any template.
+4. Refresh the page and reopen Template Management.
+5. If the change remains, the KV binding is working.
 
-## 本地开发
+## Local Development
 
-推荐一键启动（前端构建 + Pages Functions，含 `/api`）：
+For a one-command startup that builds the frontend and runs Pages Functions, including `/api`:
 
 ```bash
 npm install
 npm run dev:full
 ```
 
-浏览器打开终端提示的本地地址（默认 `http://127.0.0.1:8788`）。本地未设置密码时，可用 `admin` 登录（管理员）。
+Open the local address shown in the terminal (default: `http://127.0.0.1:8788`). If no local password is configured, sign in as an administrator with `admin`.
 
-仅前端热更新（`vite`，端口通常 5173）时，需要**另开终端**先启动 API：
+For frontend-only hot module replacement with `vite` (usually on port 5173), start the API in a separate terminal first:
 
 ```bash
-# 终端 1：API（8788）
+# Terminal 1: API (8788)
 npm run dev:full
 
-# 终端 2：前端 HMR（会把 /api 代理到 8788）
+# Terminal 2: frontend HMR (proxies /api to 8788)
 npm run dev
 ```
 
-类型检查与构建：
+Type-check and build:
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-没有绑定 `TEMPLATE_KV` 时，模板数据使用内存存储；重启本地预览后会丢失。页面右上角会显示「内存存储」提示。
+Without a `TEMPLATE_KV` binding, template data is stored in memory and is lost when the local preview restarts. The upper-right corner of the page displays an “In-memory storage” indicator.
 
-## 模板注入规则
+## Template Injection Rules
 
-- 静态节点会写入顶层 `proxies`
-- 机场订阅会写入顶层 `proxy-providers`
-- 机场名称会加入 `节点选择` 策略组
-- 每个机场会自动新增一个 `type: select` 且 `use: [机场名]` 的策略组
-- 如果模板不存在对应顶层字段，会自动创建
+- Static nodes are written to the top-level `proxies` field
+- Proxy provider subscriptions are written to the top-level `proxy-providers` field
+- Provider names are added to the `节点选择` policy group
+- Each provider gets a `type: select` policy group with `use: [provider name]`
+- Missing top-level fields are created automatically
 
-## 项目结构
+## Project Structure
 
 ```text
-src/                  前端页面与转换逻辑
+src/                  Frontend pages and conversion logic
 functions/api/         Cloudflare Pages API
-functions/_shared/     生成、鉴权、模板存储等共享逻辑
-windows.yaml           默认 Windows 模板
-linux-cn.yaml          默认 Linux 国内模板
-linux-global.yaml      默认 Linux 国外模板
+functions/_shared/     Shared generation, authentication, and template storage logic
+windows.yaml           Default Windows template
+linux-cn.yaml          Default Linux China template
+linux-global.yaml      Default Linux Global template
 ```
+
+---
+
+## Community
+
+- [linux.do](https://linux.do): **Learn AI on L-Station!!!**
+- [Nodeseek.com](https://www.nodeseek.com): **Nodeseek is a place for people who love web development, hosting, VPS/server, and other geek topics.**

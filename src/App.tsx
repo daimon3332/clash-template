@@ -319,7 +319,10 @@ export default function App() {
           <div className="brand-mark">Clash Template</div>
           <h1>模板配置生成</h1>
           <p>输入访问密码进入。管理员密码可管理模板。</p>
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="访问密码" autoFocus />
+          <label className="field-group login-field">
+            <span className="field-label">访问密码</span>
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="请输入访问密码" autoFocus />
+          </label>
           <button disabled={loggingIn}>{loggingIn ? "登录中..." : "登录"}</button>
         </form>
       </main>
@@ -361,16 +364,22 @@ export default function App() {
                 <button className={templateMode === "custom" ? "active" : ""} onClick={() => setTemplateMode("custom")}>直接输入</button>
               </div>
               {templateMode === "saved" ? (
-                <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
-                  {templates.map((item) => <option key={item.id} value={item.id}>{item.name}{item.builtin ? "（默认）" : ""}</option>)}
-                </select>
+                <label className="field-group">
+                  <span className="field-label">配置模板</span>
+                  <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
+                    {templates.map((item) => <option key={item.id} value={item.id}>{item.name}{item.builtin ? "（默认）" : ""}</option>)}
+                  </select>
+                </label>
               ) : (
                 <>
                   <div className="mini-actions">
                     <label className="file-button">上传 YAML<input type="file" accept=".yaml,.yml,text/yaml" onChange={(event) => event.target.files?.[0] && readFile(event.target.files[0], setCustomTemplate)} /></label>
                     <button className="soft" onClick={() => setCustomTemplate("")}>清空</button>
                   </div>
-                  <textarea className="template-input" value={customTemplate} onChange={(event) => setCustomTemplate(event.target.value)} placeholder="粘贴完整 Clash/Mihomo YAML 模板" />
+                  <label className="field-group template-field">
+                    <span className="field-label">完整 YAML 模板</span>
+                    <textarea className="template-input" value={customTemplate} onChange={(event) => setCustomTemplate(event.target.value)} placeholder="粘贴完整 Clash/Mihomo YAML 模板" />
+                  </label>
                 </>
               )}
             </section>
@@ -383,7 +392,10 @@ export default function App() {
                   <p>支持 URI 多行、proxies YAML 段，或直接 YAML 节点列表。</p>
                 </div>
               </div>
-              <textarea className="node-input" value={nodeInput} onChange={(event) => setNodeInput(event.target.value)} placeholder="vless://...&#10;trojan://...&#10;&#10;或：&#10;proxies:&#10;  - name: ..." />
+              <label className="field-group">
+                <span className="field-label">节点 URI / YAML</span>
+                <textarea className="node-input" value={nodeInput} onChange={(event) => setNodeInput(event.target.value)} placeholder="vless://...&#10;trojan://...&#10;&#10;或：&#10;proxies:&#10;  - name: ..." />
+              </label>
             </section>
 
             <section className="step-card">
@@ -397,8 +409,14 @@ export default function App() {
               <div className="subs-list">
                 {subscriptions.map((item, index) => (
                   <div className="sub-card" key={index}>
-                    <input value={item.prefix} onChange={(event) => updateSub(index, { prefix: event.target.value })} placeholder="前缀 / 机场名" />
-                    <input value={item.url} onChange={(event) => updateSub(index, { url: event.target.value })} placeholder="订阅链接" />
+                    <label className="field-group">
+                      <span className="field-label">机场名称</span>
+                      <input value={item.prefix} onChange={(event) => updateSub(index, { prefix: event.target.value })} placeholder="前缀 / 机场名" />
+                    </label>
+                    <label className="field-group">
+                      <span className="field-label">订阅链接</span>
+                      <input value={item.url} onChange={(event) => updateSub(index, { url: event.target.value })} placeholder="https://..." />
+                    </label>
                     <button className="icon-danger" onClick={() => removeSub(index)}>删除</button>
                   </div>
                 ))}
@@ -539,7 +557,10 @@ export default function App() {
               </div>
               <button className="soft" disabled={saving} onClick={() => setEditing(null)}>关闭</button>
             </header>
-            <input className="modal-name" value={editingName} onChange={(event) => setEditingName(event.target.value)} placeholder="模板名称" disabled={saving} />
+            <label className="field-group modal-name-field">
+              <span className="field-label">模板名称</span>
+              <input className="modal-name" value={editingName} onChange={(event) => setEditingName(event.target.value)} placeholder="模板名称" disabled={saving} />
+            </label>
             <textarea className="modal-editor" value={editing.content} onChange={(event) => setEditing({ ...editing, content: event.target.value })} disabled={saving} />
             <footer className="modal-actions">
               <button className="primary" disabled={saving} onClick={saveEditing}>{saving ? "保存中..." : "保存模板"}</button>
