@@ -4,6 +4,10 @@
 
 [English](README.md) · [**简体中文**](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
+> 🌐 **演示地址：** [https://f903c54c.clash-template-dja.pages.dev/](https://f903c54c.clash-template-dja.pages.dev/)
+>
+> 🔑 **演示密码：** `admin`
+
 ## 功能
 
 - 内置 3 个不可删除模板：Windows、Linux 国内、Linux 国外
@@ -35,35 +39,37 @@ URI/YAML 转换支持常见协议：
 - `wireguard` / `wg`
 - `mieru`
 
-## Cloudflare Pages 部署
+## 🚀 部署到 Cloudflare Pages
 
-推荐使用 Cloudflare Dashboard 的 Git 集成部署，不需要命令行，也不需要 `wrangler.toml`。本仓库已移除 `wrangler.toml`，KV 绑定由 Cloudflare 网页后台管理。
+推荐使用 Cloudflare Pages 的 Git 集成部署，不需要命令行，也不需要 `wrangler.toml`。
 
-1. 打开 Cloudflare Dashboard，进入 **Workers & Pages**。
-2. 点击 **Create application**。
-3. 选择 **Pages**。
-4. 选择 **Connect to Git**，连接本仓库。
-5. 构建设置：
+### 1️⃣ Fork 仓库
+
+[![Fork on GitHub](https://img.shields.io/badge/Fork_on_GitHub-181717?logo=github&logoColor=white)](https://github.com/daimon3332/clash-template/fork)
+
+请先将本仓库 Fork 到自己的 GitHub 账号。Cloudflare 应连接你 Fork 后的仓库，方便后续自行更新和部署。
+
+### 2️⃣ 导入到 Cloudflare Pages
+
+[![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy_to_Cloudflare_Pages-F38020?logo=cloudflare&logoColor=white)](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
+
+进入 **Workers & Pages**，依次选择 **Create application** -> **Pages** -> **Connect to Git**，然后选择刚刚 Fork 的仓库。
+
+### 3️⃣ 配置构建参数
 
 ```text
 Framework preset: Vite 或 None
 Build command: npm run build
 Build output directory: dist
 Root directory: 留空
-Production branch: master
+Production branch: main
 ```
 
-6. 点击 **Save and Deploy**。
+确认配置后点击 **Save and Deploy**。
 
-## 环境变量
+### 4️⃣ 设置环境变量
 
-进入 Pages 项目：
-
-```text
-Settings -> Variables and Secrets
-```
-
-添加以下变量，建议都选择加密保存：
+进入 **Settings** -> **Variables and Secrets**，添加以下变量并选择加密保存：
 
 | 变量 | 说明 |
 | --- | --- |
@@ -73,15 +79,9 @@ Settings -> Variables and Secrets
 
 如果没有设置 `ACCESS_PASSWORD` 和 `ADMIN_PASSWORD`，本地开发默认可用 `admin` 作为管理员密码。生产环境建议务必设置上述变量。
 
-## Cloudflare KV 绑定
+### 5️⃣ 绑定 Cloudflare KV
 
-先在 Cloudflare Dashboard 创建 KV：
-
-```text
-Storage & Databases / Workers KV -> Create namespace
-```
-
-然后进入 Pages 项目添加绑定：
+进入 **Storage & Databases** -> **Workers KV** -> **Create namespace** 创建 KV，然后在 Pages 项目中添加绑定：
 
 ```text
 Settings -> Bindings -> Add -> KV namespace
@@ -89,17 +89,13 @@ Variable name: TEMPLATE_KV
 KV namespace: 你创建的 KV namespace
 ```
 
-注意：绑定名必须是 `TEMPLATE_KV`，否则模板保存不会持久化。
+绑定名必须是 `TEMPLATE_KV`，否则模板保存不会持久化。
 
-添加或修改环境变量、KV 绑定后，需要重新部署一次：
+### 6️⃣ 重新部署并验证
 
-```text
-Pages 项目 -> Deployments -> Retry deployment
-```
+添加或修改环境变量、KV 绑定后，进入 **Deployments** 并选择 **Retry deployment**。
 
-## 部署后验证
-
-1. 用 `ADMIN_PASSWORD` 登录。
+1. 使用 `ADMIN_PASSWORD` 登录。
 2. 进入右上角 **模板管理**。
 3. 修改任意模板并保存。
 4. 刷新页面后再次进入模板管理。

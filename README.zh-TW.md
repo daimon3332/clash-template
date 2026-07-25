@@ -4,6 +4,10 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [**繁體中文**](README.zh-TW.md)
 
+> 🌐 **示範網址：** [https://f903c54c.clash-template-dja.pages.dev/](https://f903c54c.clash-template-dja.pages.dev/)
+>
+> 🔑 **示範密碼：** `admin`
+
 ## 功能
 
 - 內建 3 個不可刪除的範本：Windows、Linux 中國、Linux 全球
@@ -35,35 +39,37 @@ URI/YAML 轉換支援常見協定：
 - `wireguard` / `wg`
 - `mieru`
 
-## Cloudflare Pages 部署
+## 🚀 部署到 Cloudflare Pages
 
-建議使用 Cloudflare Dashboard 的 Git 整合部署，不需要命令列，也不需要 `wrangler.toml`。本倉庫已移除 `wrangler.toml`，KV 綁定由 Cloudflare 網頁後台管理。
+建議使用 Cloudflare Pages 的 Git 整合部署，不需要命令列，也不需要 `wrangler.toml`。
 
-1. 開啟 Cloudflare Dashboard，進入 **Workers & Pages**。
-2. 點擊 **Create application**。
-3. 選擇 **Pages**。
-4. 選擇 **Connect to Git**，連接本倉庫。
-5. 建置設定：
+### 1️⃣ Fork 倉庫
+
+[![Fork on GitHub](https://img.shields.io/badge/Fork_on_GitHub-181717?logo=github&logoColor=white)](https://github.com/daimon3332/clash-template/fork)
+
+請先將本倉庫 Fork 到自己的 GitHub 帳號。Cloudflare 應連接你 Fork 後的倉庫，方便後續自行更新和部署。
+
+### 2️⃣ 匯入 Cloudflare Pages
+
+[![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy_to_Cloudflare_Pages-F38020?logo=cloudflare&logoColor=white)](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
+
+進入 **Workers & Pages**，依序選擇 **Create application** -> **Pages** -> **Connect to Git**，然後選擇剛才 Fork 的倉庫。
+
+### 3️⃣ 設定建置參數
 
 ```text
 Framework preset: Vite 或 None
 Build command: npm run build
 Build output directory: dist
 Root directory: 留空
-Production branch: master
+Production branch: main
 ```
 
-6. 點擊 **Save and Deploy**。
+確認設定後點擊 **Save and Deploy**。
 
-## 環境變數
+### 4️⃣ 設定環境變數
 
-進入 Pages 專案：
-
-```text
-Settings -> Variables and Secrets
-```
-
-新增以下變數，建議全部選擇加密儲存：
+進入 **Settings** -> **Variables and Secrets**，新增以下變數並選擇加密儲存：
 
 | 變數 | 說明 |
 | --- | --- |
@@ -73,15 +79,9 @@ Settings -> Variables and Secrets
 
 如果沒有設定 `ACCESS_PASSWORD` 和 `ADMIN_PASSWORD`，本機開發預設可用 `admin` 作為管理員密碼。正式環境建議務必設定上述變數。
 
-## Cloudflare KV 綁定
+### 5️⃣ 綁定 Cloudflare KV
 
-先在 Cloudflare Dashboard 建立 KV：
-
-```text
-Storage & Databases / Workers KV -> Create namespace
-```
-
-然後進入 Pages 專案新增綁定：
+進入 **Storage & Databases** -> **Workers KV** -> **Create namespace** 建立 KV，然後在 Pages 專案中新增綁定：
 
 ```text
 Settings -> Bindings -> Add -> KV namespace
@@ -89,15 +89,11 @@ Variable name: TEMPLATE_KV
 KV namespace: 你建立的 KV namespace
 ```
 
-注意：綁定名稱必須是 `TEMPLATE_KV`，否則範本儲存不會持久化。
+綁定名稱必須是 `TEMPLATE_KV`，否則範本儲存不會持久化。
 
-新增或修改環境變數、KV 綁定後，需要重新部署一次：
+### 6️⃣ 重新部署並驗證
 
-```text
-Pages 專案 -> Deployments -> Retry deployment
-```
-
-## 部署後驗證
+新增或修改環境變數、KV 綁定後，進入 **Deployments** 並選擇 **Retry deployment**。
 
 1. 使用 `ADMIN_PASSWORD` 登入。
 2. 進入右上角 **範本管理**。

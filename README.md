@@ -4,6 +4,10 @@ A web tool for generating Clash/Mihomo configurations. It supports template mana
 
 [**English**](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
+> 🌐 **Live demo:** [https://f903c54c.clash-template-dja.pages.dev/](https://f903c54c.clash-template-dja.pages.dev/)
+>
+> 🔑 **Demo password:** `admin`
+
 ## Features
 
 - Three built-in templates that cannot be deleted: Windows, Linux China, and Linux Global
@@ -35,35 +39,37 @@ URI/YAML conversion supports common protocols:
 - `wireguard` / `wg`
 - `mieru`
 
-## Deploying to Cloudflare Pages
+## 🚀 Deploy to Cloudflare Pages
 
-Cloudflare Dashboard Git integration is recommended. It requires neither the command line nor a `wrangler.toml` file. This repository does not include `wrangler.toml`; KV bindings are managed in the Cloudflare Dashboard.
+Cloudflare Pages Git integration is recommended. No command line or `wrangler.toml` is required.
 
-1. Open Cloudflare Dashboard and go to **Workers & Pages**.
-2. Click **Create application**.
-3. Select **Pages**.
-4. Select **Connect to Git** and connect this repository.
-5. Use the following build settings:
+### 1️⃣ Fork the repository
+
+[![Fork on GitHub](https://img.shields.io/badge/Fork_on_GitHub-181717?logo=github&logoColor=white)](https://github.com/daimon3332/clash-template/fork)
+
+Fork this repository to your own GitHub account first. Cloudflare should connect to your fork so that future updates and deployments remain under your control.
+
+### 2️⃣ Import the fork into Cloudflare Pages
+
+[![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy_to_Cloudflare_Pages-F38020?logo=cloudflare&logoColor=white)](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
+
+Open **Workers & Pages**, select **Create application** -> **Pages** -> **Connect to Git**, then choose your forked repository.
+
+### 3️⃣ Configure the build
 
 ```text
 Framework preset: Vite or None
 Build command: npm run build
 Build output directory: dist
 Root directory: leave blank
-Production branch: master
+Production branch: main
 ```
 
-6. Click **Save and Deploy**.
+Click **Save and Deploy** after confirming the settings.
 
-## Environment Variables
+### 4️⃣ Set environment variables
 
-Open the Pages project:
-
-```text
-Settings -> Variables and Secrets
-```
-
-Add the following variables and store them as encrypted values:
+Open **Settings** -> **Variables and Secrets**, then add the following encrypted values:
 
 | Variable | Description |
 | --- | --- |
@@ -73,15 +79,9 @@ Add the following variables and store them as encrypted values:
 
 If neither `ACCESS_PASSWORD` nor `ADMIN_PASSWORD` is set, local development uses `admin` as the default administrator password. Set these variables in production.
 
-## Cloudflare KV Binding
+### 5️⃣ Bind Cloudflare KV
 
-Create a KV namespace in Cloudflare Dashboard:
-
-```text
-Storage & Databases / Workers KV -> Create namespace
-```
-
-Then add the binding to the Pages project:
+Create a namespace under **Storage & Databases** -> **Workers KV** -> **Create namespace**. Then open the Pages project and add a binding:
 
 ```text
 Settings -> Bindings -> Add -> KV namespace
@@ -91,13 +91,9 @@ KV namespace: your KV namespace
 
 The binding name must be `TEMPLATE_KV`; otherwise, saved template changes will not persist.
 
-After adding or changing environment variables or the KV binding, redeploy:
+### 6️⃣ Redeploy and verify
 
-```text
-Pages project -> Deployments -> Retry deployment
-```
-
-## Post-deployment Verification
+After adding or changing environment variables or the KV binding, open **Deployments** and select **Retry deployment**.
 
 1. Sign in with `ADMIN_PASSWORD`.
 2. Open **Template Management** in the upper-right corner.
