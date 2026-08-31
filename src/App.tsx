@@ -231,6 +231,7 @@ export default function App() {
     }
     setSaving(true);
     try {
+      const isBuiltinEdit = editing.builtin;
       const data = await api<{ template: TemplateRecord; persistence?: "kv" | "memory"; warning?: string }>("/api/templates", {
         method: "POST",
         body: JSON.stringify({
@@ -246,7 +247,8 @@ export default function App() {
       if (data.persistence) setPersistence(data.persistence);
       await loadTemplates();
       const warning = data.warning || (data.persistence === "memory" ? "当前未绑定 TEMPLATE_KV，保存仅在本进程内存中，重启后会丢失" : "");
-      showToast(warning ? `模板已保存（${warning}）` : "模板已保存", warning ? "info" : "success");
+      const success = isBuiltinEdit ? "已保存为自定义模板" : "模板已保存";
+      showToast(warning ? `${success}（${warning}）` : success, warning ? "info" : "success");
     } catch (error) {
       handleError(error, "保存失败");
     } finally {
@@ -263,6 +265,21 @@ export default function App() {
       await loadTemplates();
     } catch (error) {
       handleError(error, "删除失败");
+    }
+  }
+
+  async function resetBuiltinTemplate(id: string) {
+    if (!confirm("这会清除旧版 KV 覆盖。默认模板将继续跟随代码部署更新。")) return;
+    setSaving(true);
+    try {
+      await api(`/api/templates?id=${encodeURIComponent(id)}&reset=true`, { method: "DELETE" });
+      setEditing(null);
+      await loadTemplates();
+      showToast("已恢复最新默认模板", "success");
+    } catch (error) {
+      handleError(error, "恢复默认模板失败");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -529,7 +546,7 @@ export default function App() {
           <div className="page-intro">
             <div>
               <h2>模板库</h2>
-              <p>默认模板可以修改但不能删除；自定义模板可以修改和删除。{persistence === "memory" ? " 当前为内存存储，重启后自定义/修改会丢失。" : ""}</p>
+              <p>默认模板随代码部署更新；编辑默认模板会另存为自定义模板。{persistence === "memory" ? " 当前为内存存储，重启后自定义模板会丢失。" : ""}</p>
             </div>
             <div className="mini-actions">
               <button onClick={() => openNewTemplate()}>新建模板</button>
@@ -540,7 +557,7 @@ export default function App() {
             {templates.map((item) => (
               <button className="template-tile" key={item.id} onClick={() => openEditor(item.id)}>
                 <span>{item.name}</span>
-                <small>{item.builtin ? "默认模板" : "自定义模板"}</small>
+                <small>{item.builtin ? (item.hasLegacyOverride ? "默认模板（可清理旧覆盖）" : "默认模板") : "自定义模板"}</small>
               </button>
             ))}
           </div>
@@ -553,7 +570,7 @@ export default function App() {
             <header className="modal-head">
               <div>
                 <h2>{editing.id ? "编辑模板" : "新建模板"}</h2>
-                <p>{editing.builtin ? "默认模板可修改，不可删除。" : "自定义模板可修改和删除。"}</p>
+                <p>{editing.builtin ? "默认模板随代码部署更新；保存会创建自定义副本。" : "自定义模板可修改和删除。"}</p>
               </div>
               <button className="soft" disabled={saving} onClick={() => setEditing(null)}>关闭</button>
             </header>
@@ -563,7 +580,8 @@ export default function App() {
             </label>
             <textarea className="modal-editor" value={editing.content} onChange={(event) => setEditing({ ...editing, content: event.target.value })} disabled={saving} />
             <footer className="modal-actions">
-              <button className="primary" disabled={saving} onClick={saveEditing}>{saving ? "保存中..." : "保存模板"}</button>
+              <button className="primary" disabled={saving} onClick={saveEditing}>{saving ? "保存中..." : editing.builtin ? "保存为自定义模板" : "保存模板"}</button>
+              {editing.builtin && templates.find((item) => item.id === editing.id)?.hasLegacyOverride && <button className="soft" disabled={saving} onClick={() => resetBuiltinTemplate(editing.id)}>恢复最新默认模板</button>}
               {!editing.builtin && editing.id && <button className="danger" disabled={saving} onClick={() => removeTemplate(editing.id)}>删除模板</button>}
             </footer>
           </section>

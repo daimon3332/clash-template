@@ -1,6 +1,6 @@
 import { verifyToken } from "../_shared/auth";
 import { json, readJson } from "../_shared/http";
-import { deleteTemplate, getTemplate, listTemplates, persistenceMode, saveTemplate } from "../_shared/templates";
+import { deleteTemplate, getTemplate, listTemplates, persistenceMode, resetBuiltinTemplate, saveTemplate } from "../_shared/templates";
 import type { Env } from "../_shared/types";
 
 type SaveBody = { id?: string; name: string; content: string; builtin?: boolean };
@@ -38,10 +38,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   if (!(await verifyToken(request, env, "admin"))) return json({ error: "需要管理员权限" }, 403);
-  const id = new URL(request.url).searchParams.get("id") || "";
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id") || "";
   try {
-    await deleteTemplate(env, id);
-    return json({ ok: true, persistence: persistenceMode(env) });
+    const reset = url.searchParams.get("reset") === "true";
+    if (reset) await resetBuiltinTemplate(env, id);
+    else await deleteTemplate(env, id);
+    return json({ ok: true, reset, persistence: persistenceMode(env) });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "删除失败" }, 400);
   }

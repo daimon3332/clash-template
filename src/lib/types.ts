@@ -5,6 +5,7 @@ export type TemplateMeta = {
   name: string;
   builtin: boolean;
   updatedAt?: string;
+  hasLegacyOverride?: boolean;
 };
 
 export type TemplateRecord = TemplateMeta & {

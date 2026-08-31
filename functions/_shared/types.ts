@@ -6,6 +6,7 @@ export type TemplateRecord = {
   content: string;
   builtin: boolean;
   updatedAt?: string;
+  hasLegacyOverride?: boolean;
 };
 
 export type SubscriptionInput = {

@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "vite",
-    "test": "node --test functions/_shared/generator.test.cjs",
+    "test": "node --test functions/_shared/generator.test.cjs functions/_shared/templates.test.cjs",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
