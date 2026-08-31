@@ -1,5 +1,6 @@
 import type { SubscriptionInput } from "./types";
 import { parseUriLines, proxyToYaml } from "./uriParser";
+import { parse as parseYaml } from "yaml";
 
 function scalar(value: string) {
   const text = value.trim();
@@ -150,24 +151,77 @@ function findNodeSelectGroup(lines: string[]) {
   return -1;
 }
 
+function parseScalar(value: string) {
+  try {
+    const parsed = parseYaml(value);
+    return typeof parsed === "string" ? parsed : String(parsed);
+  } catch {
+    return value.trim().replace(/^['"]|['"]$/g, "");
+  }
+}
+
+function inlineProxyNames(line: string) {
+  const match = line.match(/^\s*proxies\s*:\s*(\[.*\])\s*(?:#.*)?$/);
+  if (!match) return null;
+  try {
+    const parsed = parseYaml(`proxies: ${match[1]}`)?.proxies;
+    return Array.isArray(parsed) ? parsed.map(String) : null;
+  } catch {
+    return null;
+  }
+}
+
+function proxyListEnd(lines: string[], proxiesIndex: number, groupLimit: number) {
+  const propertyIndent = lines[proxiesIndex].match(/^\s*/)?.[0].length || 0;
+  let index = proxiesIndex + 1;
+  while (index < groupLimit) {
+    const line = lines[index];
+    if (!line.trim() || line.trim().startsWith("#")) {
+      index += 1;
+      continue;
+    }
+    const indent = line.match(/^\s*/)?.[0].length || 0;
+    if (indent <= propertyIndent) break;
+    index += 1;
+  }
+  return index;
+}
+
 function addToNodeSelectGroup(template: string, names: string[]) {
   if (!names.length) return template;
   const lines = template.split("\n");
   const groupIndex = findNodeSelectGroup(lines);
   if (groupIndex < 0) return template;
   const end = groupEnd(lines, groupIndex);
-  let proxiesIndex = lines.findIndex((line, index) => index > groupIndex && index < end && /^\s*proxies\s*:\s*$/.test(line));
+  const proxiesIndex = lines.findIndex((line, index) => index > groupIndex && index < end && /^\s*proxies\s*:/.test(line));
   if (proxiesIndex < 0) {
     const insertAt = groupIndex + 1;
-    lines.splice(insertAt, 0, "    proxies:");
-    proxiesIndex = insertAt;
+    lines.splice(insertAt, 0, "    proxies:", ...names.map((name) => `      - ${scalar(name)}`));
+    return lines.join("\n");
   }
-  const nextEnd = groupEnd(lines, groupIndex);
-  const existing = new Set(lines.slice(proxiesIndex + 1, nextEnd).map((line) => line.trim().replace(/^[- ]+/, "").trim()).filter(Boolean));
+
+  const inlineNames = inlineProxyNames(lines[proxiesIndex]);
+  if (inlineNames) {
+    const existing = new Set(inlineNames);
+    const additions = names.filter((name) => !existing.has(name));
+    if (!additions.length) return lines.join("\n");
+    const anchor = inlineNames.findIndex((name) => name.includes("香港智能筛选"));
+    inlineNames.splice(anchor >= 0 ? anchor + 1 : inlineNames.length, 0, ...additions);
+    const indent = lines[proxiesIndex].match(/^\s*/)?.[0] || "";
+    lines[proxiesIndex] = `${indent}proxies: [${inlineNames.map(scalar).join(", ")}]`;
+    return lines.join("\n");
+  }
+
+  const listEnd = proxyListEnd(lines, proxiesIndex, end);
+  const entries = lines.slice(proxiesIndex + 1, listEnd).map((line, offset) => {
+    const match = line.match(/^\s*-\s*(.+?)\s*$/);
+    return match ? { index: proxiesIndex + 1 + offset, name: parseScalar(match[1]) } : null;
+  }).filter((entry): entry is { index: number; name: string } => Boolean(entry));
+  const existing = new Set(entries.map((entry) => entry.name));
   const additions = names.filter((name) => !existing.has(name)).map((name) => `      - ${scalar(name)}`);
   if (!additions.length) return lines.join("\n");
-  const japanIndex = lines.findIndex((line, index) => index > proxiesIndex && index < nextEnd && line.includes("日本手动"));
-  const insertAt = japanIndex >= 0 ? japanIndex + 1 : proxiesIndex + 1;
+  const hongKongSmart = entries.find((entry) => entry.name.includes("香港智能筛选"));
+  const insertAt = hongKongSmart ? hongKongSmart.index + 1 : listEnd;
   return [...lines.slice(0, insertAt), ...additions, ...lines.slice(insertAt)].join("\n");
 }
 
@@ -201,10 +255,8 @@ function addProviderGroups(template: string, names: string[]) {
   const missing = names.filter((name) => !existing.has(name) && !existing.has(providerGroupTitle(name)));
   if (!missing.length) return template;
   const groups = missing.map((name) => `  - name: ${scalar(providerGroupTitle(name))}\n    type: select\n    use: [${scalar(name)}]`).join("\n\n");
-  const japan = findProxyGroup(lines, (name) => name.includes("日本手动"));
-  if (japan >= 0) return insertGroupBlock(lines, groupEnd(lines, japan), groups);
-  const anchor = lines.findIndex((line) => line.includes("策略组"));
-  if (anchor > 0) return insertGroupBlock(lines, anchor - 1, groups);
+  const microsoft = findProxyGroup(lines, (name) => name.toLowerCase() === "microsoft");
+  if (microsoft >= 0) return insertGroupBlock(lines, microsoft, groups);
   const pg = findProxyGroupsStart(lines);
   if (pg >= 0) {
     const head = lines[pg].trim().replace(/\s+#.*$/, "");

@@ -33,7 +33,7 @@ lan-allowed-ips: # 白名单
   - "127.0.0.1/8"
   - "::1/128"
   - "172.16.0.0/12"        # ← 覆盖所有 Docker Compose 子网
-ipv6: false
+ipv6: true
 unified-delay: true
 tcp-concurrent: true
 log-level: info
@@ -97,6 +97,10 @@ listeners:
   - name: china
     type: mixed
     port: 42006
+    udp: true
+  - name: port-de
+    type: mixed
+    port: 42007
     udp: true
 
 # =========================
@@ -183,6 +187,7 @@ proxy-groups:
       - 🇸🇬 新加坡手动
       - 🇯🇵 日本手动
       - 🇬🇧 英国手动
+      - 🇩🇪 德国手动
       - 亚洲智能筛选
       - 🇭🇰 香港智能筛选
 
@@ -198,7 +203,7 @@ proxy-groups:
 
   - name: 💬 AI 服务
     type: select
-    proxies: [🇺🇸 美国手动, 🚀 节点选择]
+    proxies: [🇺🇸 美国手动, 🇯🇵 日本手动, 🚀 节点选择]
 
   - name: 🇭🇰 香港手动
     type: select
@@ -214,7 +219,17 @@ proxy-groups:
     type: select
     include-all: true
     filter: "(?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美|英)).)*$"
-      
+
+  - name: 🇬🇧 英国手动
+    type: select
+    include-all: true
+    filter: "(?=.*(英|UK|United Kingdom|Britain))^((?!(美|港|台|日|韩|新)).)*$"
+
+  - name: 🇩🇪 德国手动
+    type: select
+    include-all: true
+    filter: "(?=.*(德|DE|Germany|German|🇩🇪))^((?!(港|台|日|韩|新|美|英)).)*$"
+
   - name: Microsoft
     type: select
     proxies: [🇭🇰 香港智能筛选, 亚洲智能筛选, DIRECT, 🚀 节点选择, 🇭🇰 香港手动, 🇺🇸 美国手动]
@@ -247,11 +262,6 @@ proxy-groups:
     type: select
     proxies: [亚洲智能筛选, 🚀 节点选择, 🇯🇵 日本手动, 🇸🇬 新加坡手动, 🇺🇸 美国手动]  
 
-  - name: 🇬🇧 英国手动
-    type: select
-    include-all: true
-    filter: "(?=.*(英|UK|United Kingdom|Britain))^((?!(美|港|台|日|韩|新)).)*$"
-    
   - name: 🛑 广告拦截
     type: select
     proxies: [REJECT, DIRECT]

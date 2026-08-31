@@ -1,6 +1,7 @@
 {
   "scripts": {
     "dev": "vite",
+    "test": "node --test functions/_shared/generator.test.cjs",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

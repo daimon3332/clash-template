@@ -14,6 +14,7 @@ wrangler-test-result.txt
 
 # work notes / local data (not app defaults)
 plan.md
+config.yaml
 sample-output.yaml
 *.local.yaml
 *.local.yml
